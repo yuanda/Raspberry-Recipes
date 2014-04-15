@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#Purpose:Cool down the Pi by turn on the fan when the system temp is above the threshold. 
+#When the temp is below the threshold, the fan will be turned off.
+#Created by Tony yuandahe1@gmail.com
+#1/12/2014 v0.1
+
+
+TEMP=45.0 #Temperature Threshold
+FAN_PIN=25  #The pin which connects with the fan
+CHECK_FREQ=3 #Check Temp Frequence 
+COOL_DOWN_TIME=3m #Duration of turning on fan when pi is too hot
+
+echo $FAN_PIN > /sys/class/gpio/export
+echo out > /sys/class/gpio/gpio$FAN_PIN/direction
+
+for (( ; ; ))
+do
+    tm=`/opt/vc/bin/vcgencmd measure_temp`
+    tc=`echo $tm| cut -d '=' -f2 | sed 's/..$//'`
+    tf=$(echo "scale=2;((9/5)* $tc) + 32" |bc)
+#    echo temp = $tc\°C \($tf\ °F\)
+    if [ $(echo "$tc > $TEMP" | bc) -ne 0 ]; then
+	echo "Pi is too hot! Current temp = $tc°C ($tf°F). Fan is turned on!"
+	echo 1 > /sys/class/gpio/gpio$FAN_PIN/value
+	sleep $COOL_DOWN_TIME
+    else 
+	echo "Pi is cool enough. Current temp = $tc°C ($tf°F). Fan is turned off."
+	echo 0 > /sys/class/gpio/gpio$FAN_PIN/value
+    fi
+    sleep $CHECK_FREQ
+done
